@@ -4,6 +4,7 @@ This project is organized around two core modules:
 
 - `quantum_part.py`: quantum measurement simulation, classical shadow construction, and observable estimation.
 - `Bayesian_part.py`: GP-based Bayesian learning for measurement probabilities (including conditional/autoregressive modeling).
+- `strategy_optimization.py`: fixed-budget allocation sweep over shadow size and number of time indices for both Bayesian methods.
 
 ## High-level Pipeline
 
@@ -12,6 +13,7 @@ This project is organized around two core modules:
 3. Use learned probabilities to simulate new shadows (`quantum_part.py`).
 4. Reconstruct observable dynamics via classical shadows (`quantum_part.py`).
 5. Visualize learned conditional probabilities (`Bayesian_part.py`).
+6. Optimize the measurement strategy at fixed total shot budget (`strategy_optimization.py`).
 
 ---
 
@@ -149,6 +151,54 @@ fig, ax, curves = plot_conditional_probability_curves(
     measurement_df=measurement_df,
 )
 ```
+
+## Fixed-Budget Strategy Optimization
+
+Use `strategy_optimization.py` when you want to keep
+
+`total_shots = shadow_size * num_time_indices`
+
+fixed while changing the allocation, for example `(10, 100)`, `(20, 50)`,
+`(25, 40)`, and so on.
+
+```python
+from strategy_optimization import (
+    StrategyOptimizationConfig,
+    optimize_fixed_budget_strategy,
+    plot_fixed_budget_strategy_errors,
+)
+
+config = StrategyOptimizationConfig(
+    total_shots=1000,
+    qubit_num=qubit_num,
+    strategies=[(10, 100), (20, 50), (25, 40), (50, 20), (100, 10)],
+    training_iter=200,
+    num_inducing=50,
+    error_metric="rmse",
+)
+
+strategy_df = optimize_fixed_budget_strategy(
+    mesolve_result=result,
+    tlist=tlist,
+    operator=operator,
+    config=config,
+    rng_seed=123,
+)
+
+fig, ax = plot_fixed_budget_strategy_errors(
+    strategy_df,
+    metric_label="RMSE vs theory",
+)
+```
+
+The returned dataframe contains one row per allocation strategy with:
+
+- `shadow_size`
+- `num_time_indices`
+- `total_shots`
+- `conditional_error`
+- `matrix_error`
+- `time_indices`
 
 ---
 
